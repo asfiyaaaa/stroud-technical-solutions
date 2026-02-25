@@ -26,7 +26,12 @@ export function validateResume(file: File): string | null {
     return null;
 }
 
-export async function uploadResume(file: File): Promise<string> {
+export interface ResumeUploadResult {
+    previewUrl: string;
+    downloadUrl: string;
+}
+
+export async function uploadResume(file: File): Promise<ResumeUploadResult> {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // If Cloudinary is configured, upload to cloud
@@ -37,11 +42,16 @@ export async function uploadResume(file: File): Promise<string> {
         const result = await cloudinary.uploader.upload(dataUri, {
             resource_type: 'raw',
             folder: 'resumes',
-            public_id: `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`,
-            overwrite: false,
+            use_filename: true,
+            unique_filename: true,
         });
 
-        return result.secure_url;
+        // fl_inline tells Cloudinary to serve with Content-Disposition: inline
+        // so PDFs open in the browser instead of triggering a download
+        const previewUrl = result.secure_url.replace('/upload/', '/upload/fl_inline/');
+        const downloadUrl = result.secure_url;
+
+        return { previewUrl, downloadUrl };
     }
 
     // Fallback: save to local filesystem (for local development only)
@@ -55,5 +65,6 @@ export async function uploadResume(file: File): Promise<string> {
 
     await writeFile(filepath, buffer);
 
-    return `/uploads/resumes/${filename}`;
+    const localUrl = `/uploads/resumes/${filename}`;
+    return { previewUrl: localUrl, downloadUrl: localUrl };
 }

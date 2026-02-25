@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         }
 
         // Upload resume to Cloudinary
-        const resumeUrl = await uploadResume(resume);
+        const { previewUrl: resumeUrl, downloadUrl } = await uploadResume(resume);
 
         // Save to database
         await prisma.application.create({
@@ -114,6 +114,7 @@ export async function POST(request: Request) {
             position,
             coverLetter,
             resumeUrl,
+            downloadUrl,
         }).catch(console.error);
 
         return NextResponse.json({ success: true });
