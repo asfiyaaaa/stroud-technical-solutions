@@ -1,19 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as {
-    prisma: PrismaClient | undefined;
-};
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export function getDb(): PrismaClient {
-    if (!globalForPrisma.prisma) {
-        globalForPrisma.prisma = new PrismaClient();
-    }
-    return globalForPrisma.prisma;
-}
+export const prisma =
+    globalForPrisma.prisma ??
+    new PrismaClient({
+        log: ["error"],
+    });
 
-// Lazy accessor so Prisma only connects at runtime, not at build time
-export const prisma = {
-    get contactSubmission() { return getDb().contactSubmission; },
-    get jobListing() { return getDb().jobListing; },
-    get application() { return getDb().application; },
-};
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
