@@ -39,17 +39,21 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
         const base64 = buffer.toString('base64');
         const dataUri = `data:${file.type};base64,${base64}`;
 
+        // Determine format from MIME type to preserve file integrity
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+
         const result = await cloudinary.uploader.upload(dataUri, {
             resource_type: 'raw',
             folder: 'resumes',
             use_filename: true,
             unique_filename: true,
+            format: ext,
         });
 
-        // fl_inline tells Cloudinary to serve with Content-Disposition: inline
-        // so PDFs open in the browser instead of triggering a download
+        // fl_inline: serves with Content-Disposition: inline (opens in browser)
         const previewUrl = result.secure_url.replace('/upload/', '/upload/fl_inline/');
-        const downloadUrl = result.secure_url;
+        // fl_attachment: serves with Content-Disposition: attachment (forces download, preserves integrity)
+        const downloadUrl = result.secure_url.replace('/upload/', '/upload/fl_attachment/');
 
         return { previewUrl, downloadUrl };
     }

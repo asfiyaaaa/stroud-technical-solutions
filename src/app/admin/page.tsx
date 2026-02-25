@@ -441,7 +441,7 @@ export default function AdminPage() {
                                                         View Resume
                                                     </a>
                                                     <a
-                                                        href={`${app.resumeUrl.replace('/upload/fl_inline/', '/upload/')}?dl=1`}
+                                                        href={app.resumeUrl.replace('/upload/fl_inline/', '/upload/fl_attachment/')}
                                                         className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

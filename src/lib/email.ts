@@ -97,7 +97,7 @@ export async function sendApplicationNotification(data: ApplicationEmailData) {
           <a href="${data.resumeUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right: 8px;">
             📄 View Resume
           </a>
-          <a href="${(data.downloadUrl || data.resumeUrl) + '?dl=1'}" style="display: inline-block; background: #475569; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+          <a href="${data.downloadUrl || data.resumeUrl}" style="display: inline-block; background: #475569; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
             ⬇️ Download Resume
           </a>
         </div>
