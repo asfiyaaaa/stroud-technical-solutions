@@ -26,12 +26,7 @@ export function validateResume(file: File): string | null {
     return null;
 }
 
-export interface ResumeUploadResult {
-    previewUrl: string;
-    downloadUrl: string;
-}
-
-export async function uploadResume(file: File): Promise<ResumeUploadResult> {
+export async function uploadResume(file: File): Promise<string> {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // If Cloudinary is configured, upload to cloud
@@ -39,23 +34,16 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
         const base64 = buffer.toString('base64');
         const dataUri = `data:${file.type};base64,${base64}`;
 
-        // Determine format from MIME type to preserve file integrity
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
-
         const result = await cloudinary.uploader.upload(dataUri, {
-            resource_type: 'raw',
+            resource_type: 'image',
             folder: 'resumes',
             use_filename: true,
             unique_filename: true,
-            format: ext,
         });
 
-        // fl_inline: serves with Content-Disposition: inline (opens in browser)
-        const previewUrl = result.secure_url.replace('/upload/', '/upload/fl_inline/');
-        // fl_attachment: serves with Content-Disposition: attachment (forces download, preserves integrity)
-        const downloadUrl = result.secure_url.replace('/upload/', '/upload/fl_attachment/');
-
-        return { previewUrl, downloadUrl };
+        // Return the secure URL directly — no transformations needed
+        // Cloudinary handles PDF delivery correctly with resource_type: "image"
+        return result.secure_url;
     }
 
     // Fallback: save to local filesystem (for local development only)
@@ -69,6 +57,5 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
 
     await writeFile(filepath, buffer);
 
-    const localUrl = `/uploads/resumes/${filename}`;
-    return { previewUrl: localUrl, downloadUrl: localUrl };
+    return `/uploads/resumes/${filename}`;
 }
