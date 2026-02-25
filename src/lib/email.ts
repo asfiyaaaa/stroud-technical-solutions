@@ -1,8 +1,14 @@
 import { Resend } from 'resend';
 
+// ─── Resend Singleton ──────────────────────────────────────────────
+// Lazily instantiated so env vars are definitely available at call-time.
 let _resend: Resend | null = null;
+
 function getResend(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null;
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[EMAIL] RESEND_API_KEY not configured — email will be skipped');
+    return null;
+  }
   if (!_resend) {
     _resend = new Resend(process.env.RESEND_API_KEY);
   }
@@ -12,7 +18,7 @@ function getResend(): Resend | null {
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@stroudtechnicalsolutions.com';
 const EMAIL_TO = process.env.EMAIL_TO || 'info@stroudtechnicalsolutions.com';
 
-// ─── Contact Form Notification ───────────────────────────────────
+// ─── Contact Form Notification ─────────────────────────────────────
 
 interface ContactEmailData {
   name: string;
@@ -22,11 +28,16 @@ interface ContactEmailData {
   message: string;
 }
 
-export async function sendContactNotification(data: ContactEmailData) {
+/**
+ * Sends a contact-form notification email.
+ * This function NEVER throws — all errors are caught and logged internally.
+ * Returns true if email was sent, false otherwise.
+ */
+export async function sendContactNotification(data: ContactEmailData): Promise<boolean> {
   const resend = getResend();
   if (!resend) {
-    console.log('Resend not configured — skipping email notification');
-    return;
+    console.log('[EMAIL] Resend not configured — skipping contact notification');
+    return false;
   }
 
   const html = `
@@ -49,15 +60,30 @@ export async function sendContactNotification(data: ContactEmailData) {
     </div>
   `;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: EMAIL_TO,
-    subject: `New Contact: ${data.name} - Stroud Technical Solutions`,
-    html,
-  });
+  console.log('[EMAIL] Sending contact notification for:', data.name);
+
+  try {
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      subject: `New Contact: ${data.name} - Stroud Technical Solutions`,
+      html,
+    });
+
+    if (error) {
+      console.error('EMAIL ERROR', error);
+      return false;
+    }
+
+    console.log('[EMAIL] Contact notification sent successfully');
+    return true;
+  } catch (error) {
+    console.error('EMAIL ERROR', error);
+    return false;
+  }
 }
 
-// ─── Job Application Notification ────────────────────────────────
+// ─── Job Application Notification ──────────────────────────────────
 
 interface ApplicationEmailData {
   name: string;
@@ -68,11 +94,19 @@ interface ApplicationEmailData {
   resumeUrl: string;
 }
 
-export async function sendApplicationNotification(data: ApplicationEmailData) {
+/**
+ * Sends a job-application notification email.
+ * This function NEVER throws — all errors are caught and logged internally.
+ * Returns true if email was sent, false otherwise.
+ *
+ * IMPORTANT: Only call this AFTER the resume has been uploaded to Cloudinary
+ * AND the application has been saved to the database.
+ */
+export async function sendApplicationNotification(data: ApplicationEmailData): Promise<boolean> {
   const resend = getResend();
   if (!resend) {
-    console.log('Resend not configured — skipping email notification');
-    return;
+    console.log('[EMAIL] Resend not configured — skipping application notification');
+    return false;
   }
 
   const html = `
@@ -83,8 +117,8 @@ export async function sendApplicationNotification(data: ApplicationEmailData) {
       <div style="padding: 20px; background: #f9f9f9;">
         <table style="width: 100%; border-collapse: collapse;">
           <tr><td style="padding: 8px; font-weight: bold;">Position:</td><td style="padding: 8px;">${data.position}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">Name:</td><td style="padding: 8px;">${data.name}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">${data.email}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold;">Name:</td>    <td style="padding: 8px;">${data.name}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold;">Email:</td>   <td style="padding: 8px;">${data.email}</td></tr>
           ${data.phone ? `<tr><td style="padding: 8px; font-weight: bold;">Phone:</td><td style="padding: 8px;">${data.phone}</td></tr>` : ''}
         </table>
         ${data.coverLetter ? `
@@ -93,7 +127,8 @@ export async function sendApplicationNotification(data: ApplicationEmailData) {
           <p style="margin: 0; white-space: pre-wrap;">${data.coverLetter}</p>
         </div>` : ''}
         <div style="margin-top: 16px; text-align: center;">
-          <a href="${data.resumeUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+          <a href="${data.resumeUrl}"
+             style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
             📄 Download Resume
           </a>
         </div>
@@ -101,10 +136,25 @@ export async function sendApplicationNotification(data: ApplicationEmailData) {
     </div>
   `;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: EMAIL_TO,
-    subject: `New Application: ${data.position} - ${data.name}`,
-    html,
-  });
+  console.log('[EMAIL] Sending application notification for:', data.name, '-', data.position);
+
+  try {
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      subject: `New Application: ${data.position} - ${data.name}`,
+      html,
+    });
+
+    if (error) {
+      console.error('EMAIL ERROR', error);
+      return false;
+    }
+
+    console.log('[EMAIL] Application notification sent successfully');
+    return true;
+  } catch (error) {
+    console.error('EMAIL ERROR', error);
+    return false;
+  }
 }

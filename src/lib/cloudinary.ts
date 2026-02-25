@@ -1,61 +1,98 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 
-// Cloudinary auto-configures from CLOUDINARY_URL env var
-// Format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
-cloudinary.config({
-    secure: true,
-});
+// ─── Cloudinary Configuration ─────────────────────────────────────
+// Called lazily at upload-time so Vercel serverless env vars are
+// guaranteed to be injected before this runs.
+function configureCloudinary() {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-const ALLOWED_TYPES = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-];
+    if (!cloudName || !apiKey || !apiSecret) {
+        throw new Error(
+            '[CLOUDINARY] Missing required env vars: ' +
+            'CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET'
+        );
+    }
 
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true,
+    });
 
+    return cloudName;
+}
+
+// ─── Constants ────────────────────────────────────────────────────
+const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+// ─── Validate Resume ──────────────────────────────────────────────
 export function validateResume(file: File): string | null {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-        return 'Only PDF, DOC, and DOCX files are accepted';
+    if (file.type !== 'application/pdf') {
+        return 'Only PDF files are accepted';
     }
     if (file.size > MAX_SIZE) {
-        return 'File size must be under 5MB';
+        return 'File size must be under 10 MB';
     }
     return null;
 }
 
+// ─── Build Download URL ───────────────────────────────────────────
+// For resource_type "raw", Cloudinary's public_id already includes the
+// file extension (e.g. "resumes/filename.pdf"). We use fl_attachment so
+// the browser receives the correct Content-Disposition: attachment header.
+//
+// Final URL shape:
+//   https://res.cloudinary.com/<cloud>/raw/upload/fl_attachment/<public_id>
+//
+// NOTE: Do NOT append ".pdf" — the public_id for raw uploads already ends
+// in ".pdf". Appending it again produces a double extension and 404s.
+export function buildDownloadUrl(publicId: string, cloudName: string): string {
+    // Strip any double extension just in case (defensive)
+    const cleanId = publicId.replace(/\.pdf\.pdf$/i, '.pdf');
+    return `https://res.cloudinary.com/${cloudName}/raw/upload/fl_attachment/${cleanId}`;
+}
+
+// ─── Upload Resume ────────────────────────────────────────────────
 export async function uploadResume(file: File): Promise<string> {
+    // Configure + validate env vars at call-time (not module load time)
+    const cloudName = configureCloudinary();
+
     const buffer = Buffer.from(await file.arrayBuffer());
+    const base64 = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${base64}`;
 
-    // If Cloudinary is configured, upload to cloud
-    if (process.env.CLOUDINARY_URL) {
-        const base64 = buffer.toString('base64');
-        const dataUri = `data:${file.type};base64,${base64}`;
+    console.log(
+        '[CLOUDINARY] Starting upload:',
+        file.name,
+        `(${(file.size / 1024).toFixed(1)} KB)`
+    );
 
-        const result = await cloudinary.uploader.upload(dataUri, {
-            resource_type: 'image',
+    let result: Awaited<ReturnType<typeof cloudinary.uploader.upload>>;
+    try {
+        result = await cloudinary.uploader.upload(dataUri, {
+            resource_type: 'raw',      // ← required for non-image files (PDFs)
             folder: 'resumes',
-            use_filename: true,
-            unique_filename: true,
+            use_filename: true,        // ← use original filename as public_id base
+            unique_filename: true,     // ← add random suffix to avoid collisions
         });
-
-        // Return the secure URL directly — no transformations needed
-        // Cloudinary handles PDF delivery correctly with resource_type: "image"
-        return result.secure_url;
+    } catch (error) {
+        console.error('UPLOAD ERROR', error);
+        throw new Error('Failed to upload resume to Cloudinary');
     }
 
-    // Fallback: save to local filesystem (for local development only)
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'resumes');
-    await mkdir(uploadsDir, { recursive: true });
+    console.log('[CLOUDINARY] Upload success:', {
+        public_id: result.public_id,
+        format: result.format,
+        bytes: result.bytes,
+        secure_url: result.secure_url,
+    });
 
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filename = `${timestamp}_${safeName}`;
-    const filepath = path.join(uploadsDir, filename);
+    // Build the proper download URL with fl_attachment
+    const downloadUrl = buildDownloadUrl(result.public_id, cloudName);
+    console.log('[CLOUDINARY] Download URL:', downloadUrl);
 
-    await writeFile(filepath, buffer);
-
-    return `/uploads/resumes/${filename}`;
+    return downloadUrl;
 }
