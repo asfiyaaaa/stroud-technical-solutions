@@ -115,12 +115,14 @@ export async function POST(request: Request) {
             resumeUrl = await uploadResume(resume);
             console.log('[CAREERS POST] Resume uploaded successfully:', resumeUrl);
         } catch (uploadError) {
-            console.error('UPLOAD ERROR', uploadError);
+            const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
+            console.error('UPLOAD ERROR', msg, uploadError);
             return NextResponse.json(
-                { error: 'Failed to upload resume. Please try again.' },
+                { error: `Upload failed: ${msg}` },
                 { status: 500 }
             );
         }
+
 
         // ── 7. Save to database ───────────────────────────────────────
         // Must complete BEFORE sending email notification.
