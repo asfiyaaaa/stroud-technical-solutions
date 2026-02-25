@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// For local development: provider = "sqlite", url = "file:./dev.db"
+// For production (Vercel/Neon): provider = "postgresql", url from env
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  message   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+}
+
+model JobListing {
+  id           String   @id @default(cuid())
+  title        String
+  department   String
+  location     String
+  type         String
+  description  String
+  requirements String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  position    String   @default("General Application")
+  resumeUrl   String
+  coverLetter String?
+  createdAt   DateTime @default(now())
+  reviewed    Boolean  @default(false)
+}
