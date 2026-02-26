@@ -34,7 +34,7 @@ export default function Header() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2 group">
                         <span className="text-primary-900 font-heading font-extrabold text-2xl tracking-tighter group-hover:text-accent transition-colors">
-                            Stroud Technical Solutions
+                            Stroud Technical Solutions (v1.1)
                         </span>
                     </Link>
 
