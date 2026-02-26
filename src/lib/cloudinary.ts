@@ -1,4 +1,4 @@
-import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse, UploadApiOptions } from 'cloudinary';
 
 // ─── Cloudinary Configuration ──────────────────────────────────────
 // Called lazily at upload-time so Vercel serverless injects env vars
@@ -43,7 +43,7 @@ export function buildDownloadUrl(publicId: string, cloudName: string): string {
 // size inflation from data URIs, which can exceed Vercel's body limit.
 function uploadBufferToCloudinary(
     buffer: Buffer,
-    options: Parameters<typeof cloudinary.uploader.upload_stream>[0]
+    options: UploadApiOptions
 ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
