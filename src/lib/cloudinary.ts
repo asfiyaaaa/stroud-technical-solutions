@@ -152,11 +152,10 @@ export async function uploadResume(file: File): Promise<string> {
     let result: UploadApiResponse;
     try {
         result = await uploadBufferToCloudinary(buffer, {
-            resource_type: 'raw',      // REQUIRED for PDFs and all non-image files
+            resource_type: 'auto',      // Detects PDF and treats as document/image for proper headers
             folder: 'resumes',
             use_filename: true,        // use original filename as public_id base
             unique_filename: true,      // append random suffix to prevent collisions
-            content_type: 'application/pdf', // Ensures correct MIME type for raw PDF resources
         });
     } catch (err: unknown) {
         // Log the full error object so Vercel Function Logs show the real reason
