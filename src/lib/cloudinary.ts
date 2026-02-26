@@ -81,26 +81,21 @@ export interface ResumeUrls {
 }
 
 /**
- * Builds both a browser-viewable URL and a force-download URL from
- * Cloudinary's secure_url returned by the upload response.
+ * Builds both a browser-viewable URL and a download URL.
  *
- * Why use secure_url directly?
- *   Cloudinary's secure_url includes the version path (e.g. /v1772090652/)
- *   which ensures the file is served with the correct Content-Type header
- *   (application/pdf for PDFs). Manually-built URLs without the version
- *   may serve as application/octet-stream, causing binary downloads.
- *
- * - viewUrl      — secure_url as-is → opens inline in browser as PDF
- * - downloadUrl  — injects fl_attachment/ → forces Content-Disposition: attachment
+ * - viewUrl      — uses fl_inline/ to force Content-Type: application/pdf
+ *                  so the browser renders the PDF inline instead of downloading.
+ * - downloadUrl  — appends ?dl=1 to trigger browser download.
  */
-export function buildFileUrls(secureUrl: string): ResumeUrls {
-    // viewUrl: use Cloudinary's secure_url directly (has correct Content-Type)
-    const viewUrl = secureUrl;
+export function buildFileUrls(publicId: string, cloudName: string): ResumeUrls {
+    // Guard against accidental double extension (e.g. "file.pdf.pdf")
+    const safeId = publicId.replace(/\.pdf\.pdf$/i, '.pdf');
+    const base = `https://res.cloudinary.com/${cloudName}/raw/upload`;
 
-    // downloadUrl: inject fl_attachment/ after /upload/ to force download
-    const downloadUrl = secureUrl.replace('/upload/', '/upload/fl_attachment/');
-
-    return { viewUrl, downloadUrl };
+    return {
+        viewUrl: `${base}/fl_inline/${safeId}`,   // opens PDF in browser
+        downloadUrl: `${base}/${safeId}?dl=1`,         // forces download
+    };
 }
 
 // ─── Core upload helper ───────────────────────────────────────────────────────
@@ -172,10 +167,12 @@ export async function uploadResume(file: File): Promise<ResumeUrls> {
     let result: UploadApiResponse;
     try {
         result = await uploadBufferToCloudinary(buffer, {
-            resource_type: 'raw',  // REQUIRED for PDFs and all non-image files
+            resource_type: 'raw',      // REQUIRED for PDFs and all non-image files
             folder: 'resumes',
-            use_filename: true,   // use original filename as public_id base
-            unique_filename: true,   // append random suffix to prevent collisions
+            use_filename: true,       // use original filename as public_id base
+            unique_filename: true,     // append random suffix to prevent collisions
+            format: 'pdf',      // ensures Cloudinary serves with correct MIME type
+            type: 'upload',   // explicit upload type
         });
     } catch (err: unknown) {
         // Log the full error object so Vercel Function Logs show the real reason
@@ -199,11 +196,12 @@ export async function uploadResume(file: File): Promise<ResumeUrls> {
     console.log('[CLOUDINARY] Upload succeeded:', {
         public_id: result.public_id,
         format: result.format,
+        resource_type: result.resource_type,
         bytes: result.bytes,
         secure_url: result.secure_url,
     });
 
-    const urls = buildFileUrls(result.secure_url);
+    const urls = buildFileUrls(result.public_id, cloudName);
     console.log('[CLOUDINARY] URLs:', urls);
 
     return urls;
