@@ -10,7 +10,7 @@ async function testSubmission() {
     form.append('resume', fs.createReadStream(path.join(__dirname, 'test.pdf')), 'test.pdf');
 
     try {
-        const response = await axios.post('http://localhost:3000/api/careers', form, {
+        const response = await axios.post('https://stroudtechnicalsolutions.com/api/careers', form, {
             headers: form.getHeaders(),
         });
         console.log('Response:', response.data);

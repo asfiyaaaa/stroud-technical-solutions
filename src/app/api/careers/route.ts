@@ -38,7 +38,9 @@ export async function GET() {
             where: { isActive: true },
             orderBy: { createdAt: 'desc' },
         });
-        return NextResponse.json({ jobs });
+        const response = NextResponse.json({ jobs });
+        response.headers.set('X-Deployment-Check', 'image-pdf-v1');
+        return response;
     } catch (error) {
         console.error('[CAREERS GET] Error fetching jobs:', error);
         return NextResponse.json({ jobs: [] });
