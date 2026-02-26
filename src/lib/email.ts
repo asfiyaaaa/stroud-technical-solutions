@@ -127,17 +127,14 @@ export async function sendApplicationNotification(data: ApplicationEmailData): P
           <h3 style="margin: 0 0 8px;">Cover Letter:</h3>
           <p style="margin: 0; white-space: pre-wrap;">${data.coverLetter}</p>
         </div>` : ''}
-        <div style="margin-top: 16px; text-align: center;">
-          ${data.resumeViewUrl ? `
-          <a href="${data.resumeViewUrl}"
-             target="_blank"
-             style="display: inline-block; background: #059669; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right: 8px;">
-            👁 View Resume
-          </a>` : ''}
-          <a href="${data.resumeUrl}"
-             style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-            📄 Download Resume
-          </a>
+        <div style="margin-top: 16px; padding: 16px; background: white; border-radius: 8px;">
+          <p><strong>Resume:</strong></p>
+          <p>
+            <a href="${data.resumeViewUrl}" target="_blank" style="color: #059669; font-weight: bold;">View Resume</a>
+          </p>
+          <p>
+            <a href="${data.resumeUrl}" style="color: #2563eb; font-weight: bold;">Download Resume</a>
+          </p>
         </div>
       </div>
     </div>

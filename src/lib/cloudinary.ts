@@ -70,31 +70,25 @@ export function validateResume(file: File): string | null {
     return null;
 }
 
-// ─── Build download URL ──────────────────────────────────────────────────────
-
 /** Return type for resume upload — provides both view-inline and download URLs. */
 export interface ResumeUrls {
-    /** Opens the PDF inline in the browser (no Content-Disposition header). */
+    /** Opens the PDF inline in the browser. */
     viewUrl: string;
-    /** Forces the browser to download the file (Content-Disposition: attachment). */
+    /** Forces the browser to download the file. */
     downloadUrl: string;
 }
 
 /**
  * Builds both a browser-viewable URL and a download URL.
  *
- * - viewUrl      — uses fl_inline/ to force Content-Type: application/pdf
- *                  so the browser renders the PDF inline instead of downloading.
- * - downloadUrl  — appends ?dl=1 to trigger browser download.
+ * Requirements:
+ * 1. viewUrl      — opens in browser PDF viewer
+ * 2. downloadUrl  — forces download via ?dl=1
  */
-export function buildFileUrls(publicId: string, cloudName: string): ResumeUrls {
-    // Guard against accidental double extension (e.g. "file.pdf.pdf")
-    const safeId = publicId.replace(/\.pdf\.pdf$/i, '.pdf');
-    const base = `https://res.cloudinary.com/${cloudName}/raw/upload`;
-
+export function buildResumeUrls(secureUrl: string): ResumeUrls {
     return {
-        viewUrl: `${base}/fl_inline/${safeId}`,   // opens PDF in browser
-        downloadUrl: `${base}/${safeId}?dl=1`,         // forces download
+        viewUrl: secureUrl,                 // opens in browser
+        downloadUrl: `${secureUrl}?dl=1`,   // forces download
     };
 }
 
@@ -142,18 +136,9 @@ function uploadBufferToCloudinary(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Uploads a PDF resume File to Cloudinary and returns a download URL.
- *
- * Flow:
- *   1. Configure Cloudinary from env vars (lazy, call-time).
- *   2. Convert Web API File → Node.js Buffer.
- *   3. Upload Buffer via upload_stream with resource_type "raw".
- *   4. Build and return a stable fl_attachment download URL.
- *
- * Throws on upload failure so the caller (API route) can handle the error
- * and return an appropriate HTTP response.
+ * Uploads a PDF resume File to Cloudinary and returns its secure_url.
  */
-export async function uploadResume(file: File): Promise<ResumeUrls> {
+export async function uploadResume(file: File): Promise<string> {
     // ── 1. Configure ──────────────────────────────────────────────────────────
     const cloudName = configureCloudinary();
 
@@ -169,10 +154,8 @@ export async function uploadResume(file: File): Promise<ResumeUrls> {
         result = await uploadBufferToCloudinary(buffer, {
             resource_type: 'raw',      // REQUIRED for PDFs and all non-image files
             folder: 'resumes',
-            use_filename: true,       // use original filename as public_id base
-            unique_filename: true,     // append random suffix to prevent collisions
-            format: 'pdf',      // ensures Cloudinary serves with correct MIME type
-            type: 'upload',   // explicit upload type
+            use_filename: true,        // use original filename as public_id base
+            unique_filename: true,      // append random suffix to prevent collisions
         });
     } catch (err: unknown) {
         // Log the full error object so Vercel Function Logs show the real reason
@@ -192,17 +175,13 @@ export async function uploadResume(file: File): Promise<ResumeUrls> {
         throw new Error(`Cloudinary upload failed: ${message}`);
     }
 
-    // ── 4. Build URLs ─────────────────────────────────────────────────────────
+    // ── 4. Return result ──────────────────────────────────────────────────────
     console.log('[CLOUDINARY] Upload succeeded:', {
         public_id: result.public_id,
-        format: result.format,
         resource_type: result.resource_type,
         bytes: result.bytes,
         secure_url: result.secure_url,
     });
 
-    const urls = buildFileUrls(result.public_id, cloudName);
-    console.log('[CLOUDINARY] URLs:', urls);
-
-    return urls;
+    return result.secure_url;
 }

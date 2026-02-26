@@ -116,7 +116,8 @@ export async function POST(request: Request) {
         let resumeUrl: string;
         let resumeViewUrl: string;
         try {
-            const urls = await uploadResume(resume);
+            const secureUrl = await uploadResume(resume);
+            const urls = buildResumeUrls(secureUrl);
             resumeUrl = urls.downloadUrl;
             resumeViewUrl = urls.viewUrl;
             console.log('[CAREERS POST] Resume uploaded successfully:', { resumeUrl, resumeViewUrl });
