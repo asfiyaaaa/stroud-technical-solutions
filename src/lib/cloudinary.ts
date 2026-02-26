@@ -154,7 +154,7 @@ export async function uploadResume(file: File): Promise<string> {
         result = await uploadBufferToCloudinary(buffer, {
             resource_type: 'image',    // Forced for PDFs to enable document features
             format: 'pdf',             // Guarantee .pdf extension and headers
-            folder: 'resumes',
+            folder: 'resumes-v1-1',
             use_filename: true,
             unique_filename: true,
         });

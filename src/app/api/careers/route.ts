@@ -180,7 +180,10 @@ export async function POST(request: Request) {
         }
 
         // ── 9. Return success ─────────────────────────────────────────
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Application Submitted Successfully (Build v1.1-canary)'
+        });
 
     } catch (error) {
         console.error('[CAREERS POST] UNHANDLED ERROR', error);
