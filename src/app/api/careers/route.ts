@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendApplicationNotification } from '@/lib/email';
-import { uploadResume, validateResume } from '@/lib/cloudinary';
+import { uploadResume, validateResume, buildResumeUrls } from '@/lib/cloudinary';
 
 // ─── Simple in-memory rate limiter ────────────────────────────────
 // NOTE: In a multi-instance Vercel deployment, rate state does NOT persist
