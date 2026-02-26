@@ -1,4 +1,7 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // seconds — needed for large file uploads on Vercel
+export const runtime = 'nodejs';
+
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -115,8 +118,15 @@ export async function POST(request: Request) {
             resumeUrl = await uploadResume(resume);
             console.log('[CAREERS POST] Resume uploaded successfully:', resumeUrl);
         } catch (uploadError) {
-            const msg = uploadError instanceof Error ? uploadError.message : String(uploadError);
-            console.error('UPLOAD ERROR', msg, uploadError);
+            // Log the full error so Vercel Function Logs show the real reason
+            console.error('[CAREERS POST] UPLOAD ERROR (full):', uploadError);
+            const msg =
+                uploadError instanceof Error
+                    ? uploadError.message
+                    : typeof uploadError === 'object'
+                        ? JSON.stringify(uploadError)
+                        : String(uploadError);
+            console.error('[CAREERS POST] UPLOAD ERROR (msg):', msg);
             return NextResponse.json(
                 { error: `Upload failed: ${msg}` },
                 { status: 500 }

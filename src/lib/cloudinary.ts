@@ -86,8 +86,10 @@ export async function uploadResume(file: File): Promise<string> {
             unique_filename: true,    // append random suffix to prevent overwrites
         });
     } catch (error) {
-        console.error('UPLOAD ERROR', error);
-        throw new Error('Failed to upload resume to Cloudinary');
+        // Log full error here and re-throw the original so the API route
+        // can surface the real Cloudinary error message to Vercel Function Logs.
+        console.error('[CLOUDINARY] Upload failed:', error);
+        throw error;
     }
 
     console.log('[CLOUDINARY] Upload success:', {
