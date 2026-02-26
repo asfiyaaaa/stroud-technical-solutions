@@ -1,4 +1,4 @@
-import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse, UploadApiOptions } from 'cloudinary';
+import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
 
 // ─── Cloudinary Configuration ──────────────────────────────────────
 // Called lazily at upload-time so Vercel serverless injects env vars
@@ -43,7 +43,10 @@ export function buildDownloadUrl(publicId: string, cloudName: string): string {
 // size inflation from data URIs, which can exceed Vercel's body limit.
 function uploadBufferToCloudinary(
     buffer: Buffer,
-    options: UploadApiOptions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options: any  // typed as `any` because Cloudinary typedefs for upload_stream
+    // options vary across package versions and don't always include
+    // resource_type, causing spurious TS errors on some build hosts.
 ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -84,7 +87,7 @@ export async function uploadResume(file: File): Promise<string> {
             folder: 'resumes',
             use_filename: true,    // use original filename as public_id base
             unique_filename: true, // append random suffix to prevent overwrites
-        } as any);
+        });
     } catch (error) {
         // Log full error here and re-throw the original so the API route
         // can surface the real Cloudinary error message to Vercel Function Logs.
