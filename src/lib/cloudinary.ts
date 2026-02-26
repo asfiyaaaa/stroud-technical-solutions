@@ -156,6 +156,7 @@ export async function uploadResume(file: File): Promise<string> {
             folder: 'resumes',
             use_filename: true,        // use original filename as public_id base
             unique_filename: true,      // append random suffix to prevent collisions
+            content_type: 'application/pdf', // Ensures correct MIME type for raw PDF resources
         });
     } catch (err: unknown) {
         // Log the full error object so Vercel Function Logs show the real reason
