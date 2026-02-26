@@ -83,8 +83,8 @@ export async function uploadResume(file: File): Promise<string> {
             resource_type: 'raw',   // required for PDFs and all non-image files
             folder: 'resumes',
             use_filename: true,    // use original filename as public_id base
-            unique_filename: true,    // append random suffix to prevent overwrites
-        });
+            unique_filename: true, // append random suffix to prevent overwrites
+        } as any);
     } catch (error) {
         // Log full error here and re-throw the original so the API route
         // can surface the real Cloudinary error message to Vercel Function Logs.
