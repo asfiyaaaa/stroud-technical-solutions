@@ -81,23 +81,26 @@ export interface ResumeUrls {
 }
 
 /**
- * Builds both a browser-viewable URL and a force-download URL for a raw asset.
+ * Builds both a browser-viewable URL and a force-download URL from
+ * Cloudinary's secure_url returned by the upload response.
  *
- * For resource_type "raw", Cloudinary embeds the file extension in public_id
- * (e.g. "resumes/CV.pdf"). The URL pattern is:
- *   https://res.cloudinary.com/<cloud>/raw/upload/<transformations>/<public_id>
+ * Why use secure_url directly?
+ *   Cloudinary's secure_url includes the version path (e.g. /v1772090652/)
+ *   which ensures the file is served with the correct Content-Type header
+ *   (application/pdf for PDFs). Manually-built URLs without the version
+ *   may serve as application/octet-stream, causing binary downloads.
  *
- * - viewUrl      — no transformation → opens inline in browser
- * - downloadUrl  — fl_attachment → forces Content-Disposition: attachment
+ * - viewUrl      — secure_url as-is → opens inline in browser as PDF
+ * - downloadUrl  — injects fl_attachment/ → forces Content-Disposition: attachment
  */
-export function buildFileUrls(publicId: string, cloudName: string): ResumeUrls {
-    // Defensive guard against accidental double extension (e.g. "file.pdf.pdf")
-    const safeId = publicId.replace(/\.pdf\.pdf$/i, '.pdf');
-    const base = `https://res.cloudinary.com/${cloudName}/raw/upload`;
-    return {
-        viewUrl: `${base}/${safeId}`,
-        downloadUrl: `${base}/fl_attachment/${safeId}`,
-    };
+export function buildFileUrls(secureUrl: string): ResumeUrls {
+    // viewUrl: use Cloudinary's secure_url directly (has correct Content-Type)
+    const viewUrl = secureUrl;
+
+    // downloadUrl: inject fl_attachment/ after /upload/ to force download
+    const downloadUrl = secureUrl.replace('/upload/', '/upload/fl_attachment/');
+
+    return { viewUrl, downloadUrl };
 }
 
 // ─── Core upload helper ───────────────────────────────────────────────────────
@@ -200,7 +203,7 @@ export async function uploadResume(file: File): Promise<ResumeUrls> {
         secure_url: result.secure_url,
     });
 
-    const urls = buildFileUrls(result.public_id, cloudName);
+    const urls = buildFileUrls(result.secure_url);
     console.log('[CLOUDINARY] URLs:', urls);
 
     return urls;
