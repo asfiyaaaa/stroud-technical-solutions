@@ -92,6 +92,7 @@ interface ApplicationEmailData {
   position: string;
   coverLetter?: string;
   resumeUrl: string;
+  resumeViewUrl?: string;
 }
 
 /**
@@ -127,6 +128,12 @@ export async function sendApplicationNotification(data: ApplicationEmailData): P
           <p style="margin: 0; white-space: pre-wrap;">${data.coverLetter}</p>
         </div>` : ''}
         <div style="margin-top: 16px; text-align: center;">
+          ${data.resumeViewUrl ? `
+          <a href="${data.resumeViewUrl}"
+             target="_blank"
+             style="display: inline-block; background: #059669; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right: 8px;">
+            👁 View Resume
+          </a>` : ''}
           <a href="${data.resumeUrl}"
              style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
             📄 Download Resume

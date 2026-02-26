@@ -37,6 +37,7 @@ interface Application {
     position: string;
     coverLetter?: string;
     resumeUrl: string;
+    resumeViewUrl?: string;
     createdAt: string;
     reviewed: boolean;
 }
@@ -427,7 +428,21 @@ export default function AdminPage() {
                                                 {app.coverLetter && (
                                                     <p className="text-steel-600 text-sm leading-relaxed mt-3 bg-steel-50 p-3 rounded-lg">{app.coverLetter}</p>
                                                 )}
-                                                <div className="mt-3">
+                                                <div className="mt-3 flex gap-2">
+                                                    {app.resumeViewUrl && (
+                                                        <a
+                                                            href={app.resumeViewUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                            </svg>
+                                                            View Resume
+                                                        </a>
+                                                    )}
                                                     <a
                                                         href={app.resumeUrl}
                                                         target="_blank"

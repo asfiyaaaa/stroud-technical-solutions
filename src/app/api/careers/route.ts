@@ -114,9 +114,12 @@ export async function POST(request: Request) {
         // ── 6. Upload resume to Cloudinary ────────────────────────────
         // Must complete BEFORE database save or email.
         let resumeUrl: string;
+        let resumeViewUrl: string;
         try {
-            resumeUrl = await uploadResume(resume);
-            console.log('[CAREERS POST] Resume uploaded successfully:', resumeUrl);
+            const urls = await uploadResume(resume);
+            resumeUrl = urls.downloadUrl;
+            resumeViewUrl = urls.viewUrl;
+            console.log('[CAREERS POST] Resume uploaded successfully:', { resumeUrl, resumeViewUrl });
         } catch (uploadError) {
             // Log the full error so Vercel Function Logs show the real reason
             console.error('[CAREERS POST] UPLOAD ERROR (full):', uploadError);
@@ -138,7 +141,7 @@ export async function POST(request: Request) {
         // Must complete BEFORE sending email notification.
         try {
             await prisma.application.create({
-                data: { name, email, phone, position, coverLetter, resumeUrl },
+                data: { name, email, phone, position, coverLetter, resumeUrl, resumeViewUrl },
             });
             console.log('[CAREERS POST] Application saved to database');
         } catch (dbError) {
@@ -160,6 +163,7 @@ export async function POST(request: Request) {
                 position,
                 coverLetter,
                 resumeUrl,
+                resumeViewUrl,
             });
             if (emailSent) {
                 console.log('[CAREERS POST] Email notification sent');

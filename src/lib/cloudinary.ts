@@ -72,20 +72,32 @@ export function validateResume(file: File): string | null {
 
 // ─── Build download URL ──────────────────────────────────────────────────────
 
+/** Return type for resume upload — provides both view-inline and download URLs. */
+export interface ResumeUrls {
+    /** Opens the PDF inline in the browser (no Content-Disposition header). */
+    viewUrl: string;
+    /** Forces the browser to download the file (Content-Disposition: attachment). */
+    downloadUrl: string;
+}
+
 /**
- * Builds a stable Cloudinary download URL for a raw (non-image) asset.
+ * Builds both a browser-viewable URL and a force-download URL for a raw asset.
  *
  * For resource_type "raw", Cloudinary embeds the file extension in public_id
- * (e.g. "resumes/CV.pdf"). The URL pattern is deliberately:
+ * (e.g. "resumes/CV.pdf"). The URL pattern is:
  *   https://res.cloudinary.com/<cloud>/raw/upload/<transformations>/<public_id>
  *
- * fl_attachment forces Content-Disposition: attachment so browsers download
- * the file instead of attempting to render it inline.
+ * - viewUrl      — no transformation → opens inline in browser
+ * - downloadUrl  — fl_attachment → forces Content-Disposition: attachment
  */
-export function buildDownloadUrl(publicId: string, cloudName: string): string {
+export function buildFileUrls(publicId: string, cloudName: string): ResumeUrls {
     // Defensive guard against accidental double extension (e.g. "file.pdf.pdf")
     const safeId = publicId.replace(/\.pdf\.pdf$/i, '.pdf');
-    return `https://res.cloudinary.com/${cloudName}/raw/upload/fl_attachment/${safeId}`;
+    const base = `https://res.cloudinary.com/${cloudName}/raw/upload`;
+    return {
+        viewUrl: `${base}/${safeId}`,
+        downloadUrl: `${base}/fl_attachment/${safeId}`,
+    };
 }
 
 // ─── Core upload helper ───────────────────────────────────────────────────────
@@ -143,7 +155,7 @@ function uploadBufferToCloudinary(
  * Throws on upload failure so the caller (API route) can handle the error
  * and return an appropriate HTTP response.
  */
-export async function uploadResume(file: File): Promise<string> {
+export async function uploadResume(file: File): Promise<ResumeUrls> {
     // ── 1. Configure ──────────────────────────────────────────────────────────
     const cloudName = configureCloudinary();
 
@@ -180,7 +192,7 @@ export async function uploadResume(file: File): Promise<string> {
         throw new Error(`Cloudinary upload failed: ${message}`);
     }
 
-    // ── 4. Build download URL ─────────────────────────────────────────────────
+    // ── 4. Build URLs ─────────────────────────────────────────────────────────
     console.log('[CLOUDINARY] Upload succeeded:', {
         public_id: result.public_id,
         format: result.format,
@@ -188,8 +200,8 @@ export async function uploadResume(file: File): Promise<string> {
         secure_url: result.secure_url,
     });
 
-    const downloadUrl = buildDownloadUrl(result.public_id, cloudName);
-    console.log('[CLOUDINARY] Download URL:', downloadUrl);
+    const urls = buildFileUrls(result.public_id, cloudName);
+    console.log('[CLOUDINARY] URLs:', urls);
 
-    return downloadUrl;
+    return urls;
 }
